@@ -10,7 +10,16 @@ N.B. For now this script can only work using deepmatcher
 WORD = re.compile(r'\w+')
 
 
-# calculate similarity between two text vectors
+def text_to_vector(text):
+    words = WORD.findall(text)
+    return Counter(words)
+
+#Mi serve per la minkowski_distance
+def nth_root(value, n_root):
+ 
+    root_value = 1/float(n_root)
+    return value**root_value
+
 def get_cosine(text1, text2):
     vec1 = text_to_vector(text1)
     vec2 = text_to_vector(text2)
@@ -26,11 +35,26 @@ def get_cosine(text1, text2):
     else:
         return float(numerator) / denominator
 
+## Non più utile: utilizzare minkowski_distance con power=2 per avere euclidean_distance
+def euclidean_distance(text1, text2):
+    vec1 = text_to_vector(text1)
+    vec2 = text_to_vector(text2)
+    intersection = set(vec1.keys()) & set(vec2.keys())
 
-def text_to_vector(text):
-    words = WORD.findall(text)
-    return Counter(words)
+    distance = math.sqrt(sum((vec1[x] - vec2[x])**2 for x in intersection) + sum(vec1[x]**2 for x in set(vec1.keys()).difference(intersection)) +
+                    sum(vec2[x]**2 for x in set(vec2.keys()).difference(intersection)))
+    
+    return distance
 
+#Generalizzazione delle varie distanze: euclidea, manhattan etc.
+def minkowski_distance(text1, text2, power):
+    vec1 = text_to_vector(text1)
+    vec2 = text_to_vector(text2)
+    intersection = set(vec1.keys()) & set(vec2.keys())
+    distance = nth_root(sum(abs((vec1[x] - vec2[x]))**power for x in intersection) + sum(vec1[x]**power for x in set(vec1.keys()).difference(intersection)) +
+                    sum(vec2[x]**power for x in set(vec2.keys()).difference(intersection)), power)
+    
+    return distance
 
 def find_candidates(record, source, similarity_threshold, find_positives):
     record2text = " ".join([val for k, val in record.to_dict().items() if k not in ['id']])
