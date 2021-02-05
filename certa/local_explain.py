@@ -14,11 +14,18 @@ def text_to_vector(text):
     words = WORD.findall(text)
     return Counter(words)
 
-#Mi serve per la minkowski_distance
+#Serve per la minkowski_distance
 def nth_root(value, n_root):
  
     root_value = 1/float(n_root)
     return value**root_value
+
+def jaccard_similarity(text1,text2):
+    vec1 = text_to_vector(text1)
+    vec2 = text_to_vector(text2)
+    intersection_cardinality = len(set.intersection(*[set(vec1.keys()), set(vec2.keys())]))
+    union_cardinality = len(set.union(*[set(vec1.keys()), set(vec2.keys())]))
+    return intersection_cardinality/float(union_cardinality)
 
 def get_cosine(text1, text2):
     vec1 = text_to_vector(text1)
@@ -66,7 +73,7 @@ def find_candidates(record, source, similarity_threshold, find_positives):
     candidates = []
     for idx, row in enumerate(source_without_id):
         currentRecord = " ".join(row)
-        currentSimilarity = get_cosine(record2text, currentRecord)
+        currentSimilarity = jaccard_similarity(record2text, currentRecord)
         if find_positives:
             if currentSimilarity >= similarity_threshold:
                 candidates.append((record['id'], source_ids[idx]))
