@@ -1,3 +1,5 @@
+import numpy as np
+from scipy.spatial.distance import mahalanobis
 import math
 import re
 from collections import Counter
@@ -10,9 +12,12 @@ def text_to_vector(text):
     words = WORD.findall(text)
     return Counter(words)
 
+
+def get_vectors(text1, text2):
+    return text_to_vector(text1), text_to_vector(text2)
+
+
 # Serve per la minkowski_distance
-
-
 def nth_root(value, n_root):
 
     root_value = 1/float(n_root)
@@ -53,3 +58,28 @@ def minkowski_distance(text1, text2, power):
                         sum(vec2[x]**power for x in set(vec2.keys()).difference(intersection)), power)
 
     return distance
+
+
+def __get_covariance_matrix(X, Y):
+    covariance = np.cov([X, Y], rowvar=0)
+    return covariance
+
+
+def __get_pseudo_inverse(M):
+    if M.ndim > 1:
+        inverse_covariance = np.linalg.pinv(M)
+    else:
+        eps = 1e-3
+        inverse_covariance = 1/(eps + M)
+    return inverse_covariance
+
+
+def mahalanobis_distance(text1, text2):
+    vec1, vec2 = get_vectors(text1, text2)
+    intersection = set(vec1.keys()) & set(vec2.keys())
+    intersection_vec1 = np.array([vec1[x] for x in intersection])
+    intersection_vec2 = np.array([vec2[x] for x in intersection])
+    covariance_matrix = __get_covariance_matrix(
+        intersection_vec1, intersection_vec2)
+    inverse_covariance = __get_pseudo_inverse(covariance_matrix)
+    return mahalanobis(intersection_vec1, intersection_vec2, inverse_covariance)
