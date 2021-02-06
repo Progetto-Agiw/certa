@@ -79,7 +79,23 @@ def mahalanobis_distance(text1, text2):
     intersection = set(vec1.keys()) & set(vec2.keys())
     intersection_vec1 = np.array([vec1[x] for x in intersection])
     intersection_vec2 = np.array([vec2[x] for x in intersection])
-    covariance_matrix = __get_covariance_matrix(
+    unique_vec1 = np.array([vec1[x] for x in vec1.keys() - intersection])
+    unique_vec2 = np.array([vec2[x] for x in vec2.keys() - intersection])
+
+    intersection_covariance_matrix = __get_covariance_matrix(
         intersection_vec1, intersection_vec2)
-    inverse_covariance = __get_pseudo_inverse(covariance_matrix)
-    return mahalanobis(intersection_vec1, intersection_vec2, inverse_covariance)
+
+    intersection_inverse_covariance = __get_pseudo_inverse(
+        intersection_covariance_matrix)
+
+    distance = mahalanobis(
+        intersection_vec1, intersection_vec2, intersection_inverse_covariance)
+
+    auto_covariance1 = __get_covariance_matrix(unique_vec1, unique_vec1)
+    auto_covariance2 = __get_covariance_matrix(unique_vec2, unique_vec2)
+
+    distance += mahalanobis(unique_vec1, unique_vec1,
+                            __get_pseudo_inverse(auto_covariance1))
+    distance += mahalanobis(unique_vec2, unique_vec2,
+                            __get_pseudo_inverse(auto_covariance2))
+    return distance
