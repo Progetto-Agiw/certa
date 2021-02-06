@@ -13,7 +13,7 @@ def text_to_vector(text):
     return Counter(words)
 
 
-def get_vectors(text1, text2):
+def __get_vectors(text1, text2):
     return text_to_vector(text1), text_to_vector(text2)
 
 
@@ -75,7 +75,7 @@ def __get_pseudo_inverse(M):
 
 
 def mahalanobis_distance(text1, text2):
-    vec1, vec2 = get_vectors(text1, text2)
+    vec1, vec2 = __get_vectors(text1, text2)
     intersection = set(vec1.keys()) & set(vec2.keys())
     intersection_vec1 = np.array([vec1[x] for x in intersection])
     intersection_vec2 = np.array([vec2[x] for x in intersection])

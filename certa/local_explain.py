@@ -11,7 +11,7 @@ N.B. For now this script can only work using deepmatcher
 '''
 
 
-def find_candidates(record, source, similarity_threshold, find_positives):
+def find_candidates(record, source, similarity_threshold, find_positives, similarity=metrics.get_cosine):
     record2text = " ".join(
         [val for k, val in record.to_dict().items() if k not in ['id']])
     source_without_id = source.copy()
@@ -22,8 +22,7 @@ def find_candidates(record, source, similarity_threshold, find_positives):
     candidates = []
     for idx, row in enumerate(source_without_id):
         currentRecord = " ".join(row)
-        currentSimilarity = metrics.jaccard_similarity(
-            record2text, currentRecord)
+        currentSimilarity = similarity(record2text, currentRecord)
         if find_positives:
             if currentSimilarity >= similarity_threshold:
                 candidates.append((record['id'], source_ids[idx]))
