@@ -103,8 +103,6 @@ else:
         train_df), model, embeddings_model, tokenizer)
 
 theta_min, theta_max = find_similarities(test_df, False)
-model = dp.train_model_ER(to_deeper_data(
-    train_df), model, embeddings_model, tokenizer)
 
 
 l_tuple = lsource.iloc[4440]

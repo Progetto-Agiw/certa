@@ -21,7 +21,7 @@ def find_candidates(record, source, similarity_threshold, find_positives, simila
     source_without_id = source_without_id.values
     candidates = []
     for idx, row in enumerate(source_without_id):
-        currentRecord = " ".join(row)
+        currentRecord = " ".join(row.astype(str))
         currentSimilarity = similarity(record2text, currentRecord)
         if find_positives:
             if currentSimilarity >= similarity_threshold:
