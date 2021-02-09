@@ -3,6 +3,32 @@ import random
 import numpy as np
 import pandas as pd
 
+def mean_drop(stringa_vuota, attributi_random):
+    mean_drop = 0
+    #len(stringa_vuota) corrisponde al numero m della formula del paper
+    #fare len(attributi_random) sarebbe identico perchè tanto le due liste sono lunghe uguali
+    for i in range(0,len(stringa_vuota)):
+        z_primo = stringa_vuota[i]['drop']
+        z_secondo = attributi_random[i]['drop']
+        z = stringa_vuota[i]['prediction']
+        if(z_primo >= (0.5 * z)):
+            mean_drop = mean_drop + 0.5
+        if(z_secondo >= (0.5 * z)):
+            mean_drop = mean_drop + 0.5
+    return (mean_drop / len(stringa_vuota))
+
+def mean_impact(stringa_vuota, attributi_random):
+    mean_impact = 0
+    
+    for i in range(0,len(stringa_vuota)):
+        z_primo = stringa_vuota[i]['drop']
+        z_secondo = attributi_random[i]['drop']
+        z = stringa_vuota[i]['prediction']
+        if(z_primo >= (0.5 * z) or (stringa_vuota[i]['flip'] == 1)):
+            mean_impact = mean_impact + 0.5
+        if(z_secondo >= (0.5 * z) or (attributi_random[i]['flip'] == 1)):
+            mean_impact = mean_impact + 0.5
+    return (mean_impact / len(stringa_vuota))
 
 def expl_eval(class_to_explain, explanation_attributes, e_score, lsource, l_record, model, prediction, rsource,
               r_record, predict_fn):
