@@ -7,7 +7,7 @@ from keras.models import load_model
 from certa.local_explain import find_similarities
 from certa.local_explain import dataset_local
 from certa.triangles_method import explainSamples
-from certa.eval import expl_eval
+from certa.eval import expl_eval, mean_drop, mean_impact
 import math
 
 
@@ -71,33 +71,6 @@ def get_original_prediction(r1, r2):
         "#" + "1@" + str(r1r2[rprefix + 'id'].values[0])
     r1r2 = r1r2.drop([lprefix + 'id', rprefix + 'id'], axis=1)
     return predict_fn(r1r2, model)[['nomatch_score', 'match_score']].values[0]
-
-def mean_drop(stringa_vuota, attributi_random):
-    mean_drop = 0
-    #len(stringa_vuota) corrisponde al numero m della formula del paper
-    #fare len(attributi_random) sarebbe identico perchè tanto le due liste sono lunghe uguali
-    for i in range(0,len(stringa_vuota)):
-        z_primo = stringa_vuota[i]['drop']
-        z_secondo = attributi_random[i]['drop']
-        z = stringa_vuota[i]['prediction']
-        if(z_primo >= (0.5 * z)):
-            mean_drop = mean_drop + 0.5
-        if(z_secondo >= (0.5 * z)):
-            mean_drop = mean_drop + 0.5
-    return (mean_drop / len(stringa_vuota))
-
-def mean_impact(stringa_vuota, attributi_random):
-    mean_impact = 0
-    
-    for i in range(0,len(stringa_vuota)):
-        z_primo = stringa_vuota[i]['drop']
-        z_secondo = attributi_random[i]['drop']
-        z = stringa_vuota[i]['prediction']
-        if(z_primo >= (0.5 * z) or (stringa_vuota[i]['flip'] == 1)):
-            mean_impact = mean_impact + 0.5
-        if(z_secondo >= (0.5 * z) or (attributi_random[i]['flip'] == 1)):
-            mean_impact = mean_impact + 0.5
-    return (mean_impact / len(stringa_vuota))
 
 
 datadir = 'datasets/beers/'
