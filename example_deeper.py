@@ -72,8 +72,35 @@ def get_original_prediction(r1, r2):
     r1r2 = r1r2.drop([lprefix + 'id', rprefix + 'id'], axis=1)
     return predict_fn(r1r2, model)[['nomatch_score', 'match_score']].values[0]
 
+def mean_drop(stringa_vuota, attributi_random):
+    mean_drop = 0
+    #len(stringa_vuota) corrisponde al numero m della formula del paper
+    #fare len(attributi_random) sarebbe identico perchè tanto le due liste sono lunghe uguali
+    for i in range(0,len(stringa_vuota)):
+        z_primo = stringa_vuota[i]['drop']
+        z_secondo = attributi_random[i]['drop']
+        z = stringa_vuota[i]['prediction']
+        if(z_primo >= (0.5 * z)):
+            mean_drop = mean_drop + 0.5
+        if(z_secondo >= (0.5 * z)):
+            mean_drop = mean_drop + 0.5
+    return (mean_drop / len(stringa_vuota))
 
-datadir = 'datasets/itunes_amazon/'
+def mean_impact(stringa_vuota, attributi_random):
+    mean_impact = 0
+    
+    for i in range(0,len(stringa_vuota)):
+        z_primo = stringa_vuota[i]['drop']
+        z_secondo = attributi_random[i]['drop']
+        z = stringa_vuota[i]['prediction']
+        if(z_primo >= (0.5 * z) or (stringa_vuota[i]['flip'] == 1)):
+            mean_impact = mean_impact + 0.5
+        if(z_secondo >= (0.5 * z) or (attributi_random[i]['flip'] == 1)):
+            mean_impact = mean_impact + 0.5
+    return (mean_impact / len(stringa_vuota))
+
+
+datadir = 'datasets/beers/'
 lsource = pd.read_csv(datadir + 'tableA.csv')
 rsource = pd.read_csv(datadir + 'tableB.csv')
 gt = pd.read_csv(datadir + 'train.csv')
@@ -105,26 +132,40 @@ else:
 theta_min, theta_max = find_similarities(test_df, False)
 
 
-l_tuple = lsource.iloc[4440]
-r_tuple = rsource.iloc[31090]
-for nt in [int(math.log(min(len(lsource), len(rsource)))), 10, 50, 100, 200, 500, 1000]:
+stringa_vuota = []
+attributi_random = []
+
+
+for nt in [int(math.log(min(len(lsource), len(rsource)))), 10, 50]:
     print('running CERTA with nt='+str(nt))
-    local_samples = dataset_local(l_tuple, r_tuple, model, lsource, rsource, datadir, theta_min, theta_max, predict_fn,
+    for i in range(1,101):
+        l_tuple = lsource.iloc[i]
+        r_tuple = rsource.iloc[i]
+        local_samples = dataset_local(l_tuple, r_tuple, model, lsource, rsource, datadir, theta_min, theta_max, predict_fn,
                                   num_triangles=nt)
 
-    prediction = get_original_prediction(l_tuple, r_tuple)
-    class_to_explain = np.argmax(prediction)
+        prediction = get_original_prediction(l_tuple, r_tuple)
+        class_to_explain = np.argmax(prediction)
 
-    explanation, flipped_pred, triangles = explainSamples(local_samples, [lsource, rsource], model, predict_fn,
+        explanation, flipped_pred, triangles = explainSamples(local_samples, [lsource, rsource], model, predict_fn,
                                                           class_to_explain=class_to_explain, maxLenAttributeSet=4)
-    print(explanation)
+        print(explanation)
 
-    for exp in explanation:
-        e_attrs = exp.split('/')
-        e_score = explanation[exp]
-        expl_evaluation = expl_eval(class_to_explain, e_attrs, e_score, lsource, l_tuple, model, prediction, rsource,
+        for exp in explanation:
+            e_attrs = exp.split('/')
+            e_score = explanation[exp]
+            expl_evaluation = expl_eval(class_to_explain, e_attrs, e_score, lsource, l_tuple, model, prediction, rsource,
                                     r_tuple, predict_fn)
-        print(expl_evaluation.head())
-        expl_evaluation.to_csv('expl-ia-'+str(nt)+'_' +
-                               str("_".join(e_attrs))+'_'+'.csv')
-    pd.DataFrame(triangles).to_csv('triangles-ia-'+str(nt)+'.csv')
+            #Mi salvo le tuple modificate con stringa vuota
+            stringa_vuota.append(expl_evaluation.loc[0,:])
+            #Mi salvo le tuple modificate con attributi a caso
+            attributi_random.append(expl_evaluation.loc[1,:])
+            print(expl_evaluation.head())
+            break
+        print('------------------------------------')
+    drop_medio = mean_drop(stringa_vuota, attributi_random)
+    impact_medio = mean_impact(stringa_vuota, attributi_random)
+    print('*********************************************')
+    print('Il mean_drop con ' + str(nt) + ' triangoli è pari a ' + str(drop_medio))
+    print('Il mean_impact con ' + str(nt) + ' triangoli è pari a ' + str(impact_medio))
+    print('*********************************************')
