@@ -104,7 +104,7 @@ else:
         train_df), model, embeddings_model, tokenizer)
 
 
-theta_min, theta_max = find_similarities(test_df, False)
+theta_min, theta_max = find_similarities(test_df, -2)
 
 stringa_vuota = []
 attributi_random = []
