@@ -30,7 +30,6 @@ def mean_impact(stringa_vuota, attributi_random):
             mean_impact = mean_impact + 0.5
     return (mean_impact / len(stringa_vuota))
 
-
 def expl_eval(class_to_explain, explanation_attributes, e_score, lsource, l_record, model, prediction, rsource,
               r_record, predict_fn):
     results = []
@@ -66,9 +65,9 @@ def expl_eval(class_to_explain, explanation_attributes, e_score, lsource, l_reco
             class_probability = prediction[class_to_explain]
             drop = class_probability - modified_tuple_prediction[class_to_explain]
             n_drop = (class_probability - modified_tuple_prediction[class_to_explain]) / class_probability
-            impact = flip or (modified_tuple_prediction[class_to_explain] < 0.5 * class_probability)
-            n_impact = flip or (
-                    modified_tuple_prediction[class_to_explain] / class_probability < 0.5 * class_probability)
+            impact = float(flip or (modified_tuple_prediction[class_to_explain] < 0.5 * class_probability))
+            n_impact = float(flip or (
+                    modified_tuple_prediction[class_to_explain] / class_probability < 0.5 * class_probability))
             ids = str(l_record['id']) + '-' + str(r_record['id'])
             new_row = {'match': class_to_explain, 'e_score': e_score, 'drop': drop, 'n_drop': n_drop,
                        'perturb': perturb, 'flip': flip, 'impact': impact, 'n_impact': n_impact,

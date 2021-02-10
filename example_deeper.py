@@ -4,7 +4,7 @@ import os
 import gensim.downloader as api
 import models.DeepER as dp
 from keras.models import load_model
-from certa.local_explain import find_similarities
+from certa.local_explain import find_thresholds
 from certa.local_explain import dataset_local
 from certa.triangles_method import explainSamples
 from certa.eval import expl_eval, mean_drop, mean_impact
@@ -12,13 +12,12 @@ import math
 
 
 def merge_sources(table, left_prefix, right_prefix, left_source, right_source, copy_from_table, ignore_from_table):
-    dataset = pd.DataFrame(
-        columns={col: table[col].dtype for col in copy_from_table})
+    dataset = pd.DataFrame(columns={col: table[col].dtype for col in copy_from_table})
     ignore_column = copy_from_table + ignore_from_table
 
     for _, row in table.iterrows():
         leftid = row[left_prefix + 'id']
-        rightid = row[left_prefix + 'id']
+        rightid = row[right_prefix + 'id']
 
         new_row = {column: row[column] for column in copy_from_table}
 
@@ -43,16 +42,14 @@ def to_deeper_data(df: pd.DataFrame):
         rpd = row.filter(regex='^rtable_')
         if 'label' in row:
             label = row['label']
-            res.append((lpd.values.astype('str'),
-                        rpd.values.astype('str'), label))
+            res.append((lpd.values.astype('str'), rpd.values.astype('str'), label))
         else:
             res.append((lpd.values.astype('str'), rpd.values.astype('str')))
     return res
 
 
 def predict_fn(x, m, ignore_columns=['ltable_id', 'rtable_id', 'label']):
-    data = to_deeper_data(
-        x.drop([c for c in ignore_columns if c in x.columns], axis=1))
+    data = to_deeper_data(x.drop([c for c in ignore_columns if c in x.columns], axis=1))
     out = dp.predict(data, model, embeddings_model, tokenizer)
     out_df = pd.DataFrame(out, columns=['nomatch_score', 'match_score'])
     out_df.index = x.index
@@ -67,8 +64,7 @@ def get_original_prediction(r1, r2):
     r1_df.columns = list(map(lambda col: lprefix + col, r1_df.columns))
     r2_df.columns = list(map(lambda col: rprefix + col, r2_df.columns))
     r1r2 = pd.concat([r1_df, r2_df], axis=1)
-    r1r2['id'] = "0@" + str(r1r2[lprefix + 'id'].values[0]) + \
-        "#" + "1@" + str(r1r2[rprefix + 'id'].values[0])
+    r1r2['id'] = "0@" + str(r1r2[lprefix + 'id'].values[0]) + "#" + "1@" + str(r1r2[rprefix + 'id'].values[0])
     r1r2 = r1r2.drop([lprefix + 'id', rprefix + 'id'], axis=1)
     return predict_fn(r1r2, model)[['nomatch_score', 'match_score']].values[0]
 
@@ -80,12 +76,9 @@ gt = pd.read_csv(datadir + 'train.csv')
 valid = pd.read_csv(datadir + 'valid.csv')
 test = pd.read_csv(datadir + 'test.csv')
 
-train_df = merge_sources(gt, 'ltable_', 'rtable_',
-                         lsource, rsource, ['label'], ['id'])
-valid_df = merge_sources(valid, 'ltable_', 'rtable_',
-                         lsource, rsource, ['label'], ['id'])
-test_df = merge_sources(test, 'ltable_', 'rtable_',
-                        lsource, rsource, ['label'], ['id'])
+train_df = merge_sources(gt, 'ltable_', 'rtable_', lsource, rsource, ['label'], ['id'])
+valid_df = merge_sources(valid, 'ltable_', 'rtable_', lsource, rsource, ['label'], ['id'])
+test_df = merge_sources(test, 'ltable_', 'rtable_', lsource, rsource, ['label'], ['id'])
 
 if not os.path.exists('models/glove.6B.50d.txt'):
     word_vectors = api.load("glove-wiki-gigaword-50")
@@ -102,12 +95,10 @@ else:
     model = dp.train_model_ER(to_deeper_data(
         train_df), model, embeddings_model, tokenizer)
 
-theta_min, theta_max = find_similarities(test_df, False)
-
+theta_min, theta_max = find_thresholds(train_df, -2)
 
 stringa_vuota = []
 attributi_random = []
-
 
 for nt in [int(math.log(min(len(lsource), len(rsource)))), 10, 50]:
     print('running CERTA with nt='+str(nt))
@@ -120,8 +111,8 @@ for nt in [int(math.log(min(len(lsource), len(rsource)))), 10, 50]:
         prediction = get_original_prediction(l_tuple, r_tuple)
         class_to_explain = np.argmax(prediction)
 
-        explanation, flipped_pred, triangles = explainSamples(local_samples, [lsource, rsource], model, predict_fn,
-                                                          class_to_explain=class_to_explain, maxLenAttributeSet=4)
+        explanation, flipped_pred = explainSamples(local_samples, [lsource, rsource], model, predict_fn,
+                                                          class_to_explain=class_to_explain, maxLenAttributeSet=3)
         print(explanation)
 
         for exp in explanation:
@@ -142,3 +133,7 @@ for nt in [int(math.log(min(len(lsource), len(rsource)))), 10, 50]:
     print('Il mean_drop con ' + str(nt) + ' triangoli è pari a ' + str(drop_medio))
     print('Il mean_impact con ' + str(nt) + ' triangoli è pari a ' + str(impact_medio))
     print('*********************************************')
+
+#eval_data_df = pd.DataFrame(eval_data, columns=['impact-score', 'mean-drop'])
+#print(f'aggregated impact-score:{eval_data_df["impact-score"].mean()}')
+#print(f'aggregated mean-drop:{eval_data_df["mean-drop"].mean()}')
