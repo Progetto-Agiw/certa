@@ -1,14 +1,14 @@
+import math
+from certa.eval import expl_eval, mean_drop, mean_impact
+from certa.triangles_method import explainSamples
+from certa.local_explain import dataset_local
+from certa.local_explain import find_similarities
+from keras.models import load_model
 import pandas as pd
 import numpy as np
 import os
 import gensim.downloader as api
 import models.DeepER as dp
-from keras.models import load_model
-from certa.local_explain import find_similarities
-from certa.local_explain import dataset_local
-from certa.triangles_method import explainSamples
-from certa.eval import expl_eval, mean_drop, mean_impact
-import math
 
 
 def merge_sources(table, left_prefix, right_prefix, left_source, right_source, copy_from_table, ignore_from_table):
@@ -18,7 +18,7 @@ def merge_sources(table, left_prefix, right_prefix, left_source, right_source, c
 
     for _, row in table.iterrows():
         leftid = row[left_prefix + 'id']
-        rightid = row[left_prefix + 'id']
+        rightid = row[right_prefix + 'id']
 
         new_row = {column: row[column] for column in copy_from_table}
 
@@ -111,34 +111,36 @@ attributi_random = []
 
 for nt in [int(math.log(min(len(lsource), len(rsource)))), 10, 50]:
     print('running CERTA with nt='+str(nt))
-    for i in range(1,101):
+    for i in range(1, 101):
         l_tuple = lsource.iloc[i]
         r_tuple = rsource.iloc[i]
         local_samples = dataset_local(l_tuple, r_tuple, model, lsource, rsource, datadir, theta_min, theta_max, predict_fn,
-                                  num_triangles=nt)
+                                      num_triangles=nt)
 
         prediction = get_original_prediction(l_tuple, r_tuple)
         class_to_explain = np.argmax(prediction)
 
         explanation, flipped_pred = explainSamples(local_samples, [lsource, rsource], model, predict_fn,
-                                                          class_to_explain=class_to_explain, maxLenAttributeSet=3)
+                                                   class_to_explain=class_to_explain, maxLenAttributeSet=3)
         print(explanation)
 
         for exp in explanation:
             e_attrs = exp.split('/')
             e_score = explanation[exp]
             expl_evaluation = expl_eval(class_to_explain, e_attrs, e_score, lsource, l_tuple, model, prediction, rsource,
-                                    r_tuple, predict_fn)
-            #Mi salvo le tuple modificate con stringa vuota
-            stringa_vuota.append(expl_evaluation.loc[0,:])
-            #Mi salvo le tuple modificate con attributi a caso
-            attributi_random.append(expl_evaluation.loc[1,:])
+                                        r_tuple, predict_fn)
+            # Mi salvo le tuple modificate con stringa vuota
+            stringa_vuota.append(expl_evaluation.loc[0, :])
+            # Mi salvo le tuple modificate con attributi a caso
+            attributi_random.append(expl_evaluation.loc[1, :])
             print(expl_evaluation.head())
             break
         print('------------------------------------')
     drop_medio = mean_drop(stringa_vuota, attributi_random)
     impact_medio = mean_impact(stringa_vuota, attributi_random)
     print('*********************************************')
-    print('Il mean_drop con ' + str(nt) + ' triangoli è pari a ' + str(drop_medio))
-    print('Il mean_impact con ' + str(nt) + ' triangoli è pari a ' + str(impact_medio))
+    print('Il mean_drop con ' + str(nt) +
+          ' triangoli è pari a ' + str(drop_medio))
+    print('Il mean_impact con ' + str(nt) +
+          ' triangoli è pari a ' + str(impact_medio))
     print('*********************************************')

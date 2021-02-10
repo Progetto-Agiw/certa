@@ -11,9 +11,9 @@ N.B. For now this script can only work using deepmatcher
 '''
 
 
-def find_candidates(record, source, similarity_threshold, find_positives, similarity=metrics.get_cosine):
+def find_candidates(record, source, similarity_threshold, find_positives, similiarity=metrics.get_cosine):
     record2text = " ".join(
-        [val for k, val in record.to_dict().items() if k not in ['id']])
+        [str(val) for k, val in record.to_dict().items() if k not in ['id']])
     source_without_id = source.copy()
     source_without_id = source_without_id.drop(['id'], axis=1)
     source_ids = source.id.values
@@ -21,8 +21,8 @@ def find_candidates(record, source, similarity_threshold, find_positives, simila
     source_without_id = source_without_id.values
     candidates = []
     for idx, row in enumerate(source_without_id):
-        currentRecord = " ".join(row)
-        currentSimilarity = similarity(record2text, currentRecord)
+        currentRecord = " ".join(row.astype(str))
+        currentSimilarity = similiarity(record2text, currentRecord)
         if find_positives:
             if currentSimilarity >= similarity_threshold:
                 candidates.append((record['id'], source_ids[idx]))
@@ -98,7 +98,7 @@ def dataset_local(r1: pd.Series, r2: pd.Series, model, lsource: pd.DataFrame,
         )
     if len(neighborhood) > num_triangles:
         neighborhood = neighborhood.sample(n=num_triangles)
-    #neighborhood['id'] = neighborhood.index
+    # neighborhood['id'] = neighborhood.index
     neighborhood['label'] = list(map(lambda predictions: int(round(predictions)),
                                      neighborhood.match_score.values))
     neighborhood = neighborhood.drop(['match_score', 'nomatch_score'], axis=1)
@@ -107,7 +107,7 @@ def dataset_local(r1: pd.Series, r2: pd.Series, model, lsource: pd.DataFrame,
     return dataset4explanation
 
 
-def find_similarities(test_df: pd.DataFrame, strict: bool, similiarity=metrics.get_cosine):
+def find_similarities(test_df: pd.DataFrame, m: float, similiarity=metrics.get_cosine):
     lprefix = 'ltable_'
     rprefix = 'rtable_'
     ignore_columns = ['id']
@@ -133,13 +133,7 @@ def find_similarities(test_df: pd.DataFrame, strict: bool, similiarity=metrics.g
     lpos_df = tuples_ls_df[tuples_ls_df[2] == 1]
     lneg_df = tuples_ls_df[tuples_ls_df[2] == 0]
 
-    theta_mean_std_max_strict = lpos_df[3].mean()
-    theta_mean_std_min_strict = lneg_df[3].mean()
+    theta_max = lpos_df[3].mean() + m * lpos_df[3].std()
+    theta_min = lneg_df[3].mean() - m * lneg_df[3].std()
 
-    if strict:
-        theta_mean_std_max_strict = theta_mean_std_max_strict + \
-            lpos_df[3].std()
-        theta_mean_std_min_strict = theta_mean_std_min_strict - \
-            lneg_df[3].std()
-
-    return theta_mean_std_min_strict, theta_mean_std_max_strict
+    return theta_min, theta_max
