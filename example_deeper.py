@@ -99,10 +99,11 @@ theta_min, theta_max = find_thresholds(train_df, -2)
 
 stringa_vuota = []
 attributi_random = []
+eval_data_df = pd.DataFrame(columns=['impact-score', 'mean-drop'])
 
 for nt in [int(math.log(min(len(lsource), len(rsource)))), 10, 50]:
     print('running CERTA with nt='+str(nt))
-    for i in range(1,101):
+    for i in range(1,100):
         l_tuple = lsource.iloc[i]
         r_tuple = rsource.iloc[i]
         local_samples = dataset_local(l_tuple, r_tuple, model, lsource, rsource, datadir, theta_min, theta_max, predict_fn,
@@ -114,7 +115,8 @@ for nt in [int(math.log(min(len(lsource), len(rsource)))), 10, 50]:
         explanation, flipped_pred = explainSamples(local_samples, [lsource, rsource], model, predict_fn,
                                                           class_to_explain=class_to_explain, maxLenAttributeSet=3)
         print(explanation)
-
+        
+        eval_data = []
         for exp in explanation:
             e_attrs = exp.split('/')
             e_score = explanation[exp]
@@ -125,13 +127,21 @@ for nt in [int(math.log(min(len(lsource), len(rsource)))), 10, 50]:
             #Mi salvo le tuple modificate con attributi a caso
             attributi_random.append(expl_evaluation.loc[1,:])
             print(expl_evaluation.head())
+            impact = expl_evaluation["impact"].mean()
+            drop = expl_evaluation["drop"].mean()
+            eval_data.append([impact, drop])
             break
+        eval_data_temp = pd.DataFrame(eval_data, columns=['impact-score', 'mean-drop'])
+        eval_data_df = eval_data_df.append(eval_data_temp)
         print('------------------------------------')
     drop_medio = mean_drop(stringa_vuota, attributi_random)
     impact_medio = mean_impact(stringa_vuota, attributi_random)
     print('*********************************************')
     print('Il mean_drop con ' + str(nt) + ' triangoli è pari a ' + str(drop_medio))
     print('Il mean_impact con ' + str(nt) + ' triangoli è pari a ' + str(impact_medio))
+    #Teofili way
+    print(f'aggregated mean-drop:{eval_data_df["mean-drop"].mean()}')
+    print(f'aggregated impact-score:{eval_data_df["impact-score"].mean()}')
     print('*********************************************')
 
 #eval_data_df = pd.DataFrame(eval_data, columns=['impact-score', 'mean-drop'])
