@@ -112,7 +112,7 @@ eval_data_df = pd.DataFrame(columns=['impact-score', 'mean-drop'])
 
 for nt in [int(math.log(min(len(lsource), len(rsource)))), 10, 50]:
     print('running CERTA with nt='+str(nt))
-    for i in range(1, 101):
+    for i in range(1, 2):
         l_tuple = lsource.iloc[i]
         r_tuple = rsource.iloc[i]
         local_samples = dataset_local(l_tuple, r_tuple, model, lsource, rsource, datadir, theta_min, theta_max, predict_fn,
@@ -124,7 +124,8 @@ for nt in [int(math.log(min(len(lsource), len(rsource)))), 10, 50]:
         explanation, flipped_pred = explainSamples(local_samples, [lsource, rsource], model, predict_fn,
                                                    class_to_explain=class_to_explain, maxLenAttributeSet=3)
         print(explanation)
-        eval_data = []
+        eval_data_mean_all_explanations = []
+        eval_data_temp = []
         for exp in explanation:
             e_attrs = exp.split('/')
             e_score = explanation[exp]
@@ -135,12 +136,18 @@ for nt in [int(math.log(min(len(lsource), len(rsource)))), 10, 50]:
             # Mi salvo le tuple modificate con attributi a caso
             attributi_random.append(expl_evaluation.loc[1, :])
             print(expl_evaluation.head())
-            impact = expl_evaluation["impact"].mean()
-            drop = expl_evaluation["drop"].mean()
-            eval_data.append([impact, drop])
-            break
-        eval_data_temp = pd.DataFrame(eval_data, columns=['impact-score', 'mean-drop'])
-        eval_data_df = eval_data_df.append(eval_data_temp)
+            impact_mean_between_nan_and_attribute_random = expl_evaluation["impact"].mean()
+            drop_mean_between_nan_and_attribute_random = expl_evaluation["drop"].mean()
+            eval_data_temp.append([impact_mean_between_nan_and_attribute_random, drop_mean_between_nan_and_attribute_random])
+            
+        eval_data_df_temp = pd.DataFrame(eval_data_temp, columns=['impact-score', 'mean-drop'])
+        #Fai la media tra tutte le spiegazioni
+        mean_impact_between_explanations = eval_data_df_temp['impact-score'].mean()
+        mean_drop_between_explanations = eval_data_df_temp['mean-drop'].mean()
+        eval_data_mean_all_explanations.append([mean_impact_between_explanations, mean_drop_between_explanations])
+        df_to_append = pd.DataFrame(eval_data_mean_all_explanations,  columns=['impact-score', 'mean-drop'])
+        #Dataframe con un solo valore medio su più spiegazioni
+        eval_data_df = eval_data_df.append(eval_data_df_temp)
         print('------------------------------------')
     drop_medio = mean_drop(stringa_vuota, attributi_random)
     impact_medio = mean_impact(stringa_vuota, attributi_random)
