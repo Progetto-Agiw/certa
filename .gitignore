@@ -60,5 +60,4 @@ target/
 
 #CERTA artifacts
 *.csv
-*.h5
 models/*.txt
