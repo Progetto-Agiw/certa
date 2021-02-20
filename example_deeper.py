@@ -9,9 +9,10 @@ import numpy as np
 import os
 import gensim.downloader as api
 import models.DeepER as dp
+import certa.metrics
 
 
-def run():
+def run(metric):
 
     def merge_sources(table, left_prefix, right_prefix, left_source, right_source, copy_from_table, ignore_from_table):
         dataset = pd.DataFrame(
@@ -102,7 +103,7 @@ def run():
         model = dp.train_model_ER(to_deeper_data(
             train_df), model, embeddings_model, tokenizer)
 
-    theta_min, theta_max = find_similarities(train_df, -2)
+    theta_min, theta_max = find_similarities(train_df, -2, metric)
 
     stringa_vuota = []
     attributi_random = []
@@ -114,7 +115,7 @@ def run():
             l_tuple = lsource.iloc[i]
             r_tuple = rsource.iloc[i]
             local_samples = dataset_local(l_tuple, r_tuple, model, lsource, rsource, datadir, theta_min, theta_max, predict_fn,
-                                          num_triangles=nt)
+                                          num_triangles=nt, similiarity=metric)
 
             prediction = get_original_prediction(l_tuple, r_tuple)
             class_to_explain = np.argmax(prediction)
