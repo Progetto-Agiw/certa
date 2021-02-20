@@ -56,8 +56,15 @@ def minkowski_distance(text1, text2, power):
     intersection = set(vec1.keys()) & set(vec2.keys())
     distance = nth_root(sum(abs((vec1[x] - vec2[x]))**power for x in intersection) + sum(vec1[x]**power for x in set(vec1.keys()).difference(intersection)) +
                         sum(vec2[x]**power for x in set(vec2.keys()).difference(intersection)), power)
-
     return distance
+
+
+def euclidean_distance(text1, text2):
+    return minkowski_distance(text1, text2, 2)
+
+
+def manhattan_distance(text1, text2):
+    return minkowski_distance(text1, text2, 1)
 
 
 def __get_covariance_matrix(X, Y):
