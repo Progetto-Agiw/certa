@@ -9,7 +9,7 @@ import numpy as np
 import os
 import gensim.downloader as api
 import models.DeepER as dp
-import certa.metrics
+import logging
 
 
 def run(metric):
@@ -110,7 +110,7 @@ def run(metric):
     eval_data_df = pd.DataFrame(columns=['impact-score', 'mean-drop'])
 
     for nt in [int(math.log(min(len(lsource), len(rsource)))), 10, 50]:
-        print('running CERTA with nt='+str(nt))
+        logging.info('running CERTA with nt='+str(nt))
         for i in range(1, 2):
             l_tuple = lsource.iloc[i]
             r_tuple = rsource.iloc[i]
@@ -122,7 +122,7 @@ def run(metric):
 
             explanation, flipped_pred = explainSamples(local_samples, [lsource, rsource], model, predict_fn,
                                                        class_to_explain=class_to_explain, maxLenAttributeSet=3)
-            print(explanation)
+            logging.info(explanation)
             eval_data_mean_all_explanations = []
             eval_data_temp = []
             for exp in explanation:
@@ -134,7 +134,7 @@ def run(metric):
                 stringa_vuota.append(expl_evaluation.loc[0, :])
                 # Mi salvo le tuple modificate con attributi a caso
                 attributi_random.append(expl_evaluation.loc[1, :])
-                print(expl_evaluation.head())
+                logging.info(expl_evaluation.head())
                 impact_mean_between_nan_and_attribute_random = expl_evaluation["impact"].mean(
                 )
                 drop_mean_between_nan_and_attribute_random = expl_evaluation["drop"].mean(
@@ -155,7 +155,7 @@ def run(metric):
                                         'impact-score', 'mean-drop'])
             # Dataframe con un solo valore medio su più spiegazioni
             eval_data_df = eval_data_df.append(eval_data_df_temp)
-            print('------------------------------------')
+            logging.info('------------------------------------')
         drop_medio = mean_drop(stringa_vuota, attributi_random)
         impact_medio = mean_impact(stringa_vuota, attributi_random)
         yield drop_medio, impact_medio, eval_data_df["mean-drop"].mean(), eval_data_df["impact-score"].mean()
