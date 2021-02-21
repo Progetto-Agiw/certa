@@ -1,4 +1,3 @@
-import math
 from certa.eval import expl_eval, mean_drop, mean_impact
 from certa.triangles_method import explainSamples
 from certa.local_explain import dataset_local
@@ -10,9 +9,12 @@ import os
 import gensim.downloader as api
 import models.DeepER as dp
 import logging
+import random
+import math
+from tensorflow.python.framework.errors_impl import InvalidArgumentError
 
 
-def run(metric, n_tuples=5, n_triangles=[8]):
+def run(metric, n_tuples=50, n_triangles=[20], threshold_tuning: float = -2):
 
     def merge_sources(table, left_prefix, right_prefix, left_source, right_source, copy_from_table, ignore_from_table):
         dataset = pd.DataFrame(
@@ -103,7 +105,7 @@ def run(metric, n_tuples=5, n_triangles=[8]):
         model = dp.train_model_ER(to_deeper_data(
             train_df), model, embeddings_model, tokenizer)
 
-    theta_min, theta_max = find_similarities(train_df, -2, metric)
+    theta_min, theta_max = find_similarities(train_df, m=threshold_tuning, similarity=metric)
 
     stringa_vuota = []
     attributi_random = []
@@ -111,51 +113,60 @@ def run(metric, n_tuples=5, n_triangles=[8]):
 
     for nt in n_triangles:
         logging.info('running CERTA with nt='+str(nt))
-        for i in range(1, n_tuples):
-            l_tuple = lsource.iloc[i]
-            r_tuple = rsource.iloc[i]
-            local_samples = dataset_local(l_tuple, r_tuple, model, lsource, rsource, datadir, theta_min, theta_max, predict_fn,
-                                          num_triangles=nt, similiarity=metric)
+        n_failed_pairs = 0
+        for i in range(216, 219):
+            try:
+                print('starting: ', i)
+                l_tuple = lsource.iloc[i]
+                r_tuple = rsource.iloc[i]
+                local_samples = dataset_local(l_tuple, r_tuple, model, lsource, rsource, datadir, theta_min, theta_max, predict_fn,
+                                              num_triangles=nt, similiarity=metric)
 
-            prediction = get_original_prediction(l_tuple, r_tuple)
-            class_to_explain = np.argmax(prediction)
+                prediction = get_original_prediction(l_tuple, r_tuple)
+                class_to_explain = np.argmax(prediction)
 
-            explanation, flipped_pred = explainSamples(local_samples, [lsource, rsource], model, predict_fn,
-                                                       class_to_explain=class_to_explain, maxLenAttributeSet=3)
-            logging.info(explanation)
-            eval_data_mean_all_explanations = []
-            eval_data_temp = []
-            for exp in explanation:
-                e_attrs = exp.split('/')
-                e_score = explanation[exp]
-                expl_evaluation = expl_eval(class_to_explain, e_attrs, e_score, lsource, l_tuple, model, prediction, rsource,
-                                            r_tuple, predict_fn)
-                # Mi salvo le tuple modificate con stringa vuota
-                stringa_vuota.append(expl_evaluation.loc[0, :])
-                # Mi salvo le tuple modificate con attributi a caso
-                attributi_random.append(expl_evaluation.loc[1, :])
-                logging.info(expl_evaluation.head())
-                impact_mean_between_nan_and_attribute_random = expl_evaluation["impact"].mean(
+                explanation, flipped_pred = explainSamples(local_samples, [lsource, rsource], model, predict_fn,
+                                                           class_to_explain=class_to_explain, maxLenAttributeSet=3)
+                logging.info(explanation)
+                eval_data_mean_all_explanations = []
+                eval_data_temp = []
+                for exp in explanation:
+                    e_attrs = exp.split('/')
+                    e_score = explanation[exp]
+                    # possibile crash in questo punto su expl_eval, viene ignorata la coppia u,v per le metriche
+                    expl_evaluation = expl_eval(class_to_explain, e_attrs, e_score, lsource, l_tuple, model, prediction, rsource,
+                                                r_tuple, predict_fn)
+                    # Mi salvo le tuple modificate con stringa vuota
+                    stringa_vuota.append(expl_evaluation.loc[0, :])
+                    # Mi salvo le tuple modificate con attributi a caso
+                    attributi_random.append(expl_evaluation.loc[1, :])
+                    print(expl_evaluation.head())
+                    impact_mean_between_nan_and_attribute_random = expl_evaluation["impact"].mean(
+                    )
+                    drop_mean_between_nan_and_attribute_random = expl_evaluation["drop"].mean(
+                    )
+                    eval_data_temp.append(
+                        [impact_mean_between_nan_and_attribute_random, drop_mean_between_nan_and_attribute_random])
+
+                eval_data_df_temp = pd.DataFrame(eval_data_temp, columns=[
+                                                 'impact-score', 'mean-drop'])
+                # Fai la media tra tutte le spiegazioni
+                mean_impact_between_explanations = eval_data_df_temp['impact-score'].mean(
                 )
-                drop_mean_between_nan_and_attribute_random = expl_evaluation["drop"].mean(
+                mean_drop_between_explanations = eval_data_df_temp['mean-drop'].mean(
                 )
-                eval_data_temp.append(
-                    [impact_mean_between_nan_and_attribute_random, drop_mean_between_nan_and_attribute_random])
-
-            eval_data_df_temp = pd.DataFrame(eval_data_temp, columns=[
-                                             'impact-score', 'mean-drop'])
-            # Fai la media tra tutte le spiegazioni
-            mean_impact_between_explanations = eval_data_df_temp['impact-score'].mean(
-            )
-            mean_drop_between_explanations = eval_data_df_temp['mean-drop'].mean(
-            )
-            eval_data_mean_all_explanations.append(
-                [mean_impact_between_explanations, mean_drop_between_explanations])
-            df_to_append = pd.DataFrame(eval_data_mean_all_explanations,  columns=[
-                                        'impact-score', 'mean-drop'])
-            # Dataframe con un solo valore medio su più spiegazioni
-            eval_data_df = eval_data_df.append(eval_data_df_temp)
-            logging.info('------------------------------------')
+                eval_data_mean_all_explanations.append(
+                    [mean_impact_between_explanations, mean_drop_between_explanations])
+                df_to_append = pd.DataFrame(eval_data_mean_all_explanations,  columns=[
+                                            'impact-score', 'mean-drop'])
+                # Dataframe con un solo valore medio su più spiegazioni
+                eval_data_df = eval_data_df.append(eval_data_df_temp)
+                logging.info('------------------------------------')
+            except InvalidArgumentError:
+                print('failed pair:', i, ',', i)
+                n_failed_pairs += 1
+                pass
         drop_medio = mean_drop(stringa_vuota, attributi_random)
         impact_medio = mean_impact(stringa_vuota, attributi_random)
+        print('nt:', nt, '\n# of unsuccessful pairs:', n_failed_pairs, '/', n_tuples)
         yield drop_medio, impact_medio, eval_data_df["mean-drop"].mean(), eval_data_df["impact-score"].mean()
