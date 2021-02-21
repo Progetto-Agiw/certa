@@ -107,7 +107,7 @@ def dataset_local(r1: pd.Series, r2: pd.Series, model, lsource: pd.DataFrame,
     return dataset4explanation
 
 
-def find_similarities(test_df: pd.DataFrame, m: float, similiarity=metrics.get_cosine):
+def find_similarities(test_df: pd.DataFrame, m: float, similarity=metrics.get_cosine):
     lprefix = 'ltable_'
     rprefix = 'rtable_'
     ignore_columns = ['id']
@@ -125,7 +125,7 @@ def find_similarities(test_df: pd.DataFrame, m: float, similiarity=metrics.get_c
         [l_string_test_df, r_string_test_df, label_df], ignore_index=True, axis=1)
 
     sim_df = merged_string.apply(
-        lambda x: similiarity(x[0], x[1]), axis=1)
+        lambda x: similarity(x[0], x[1]), axis=1)
 
     tuples_ls_df = pd.concat([merged_string, sim_df],
                              ignore_index=True, axis=1)
