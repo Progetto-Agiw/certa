@@ -118,12 +118,9 @@ def run(metric, n_tuples=3, n_triangles=[8, 10]):
     l_tuple_indexes = random.sample(l_tuple_choices, n_tuples)
     r_tuple_indexes = random.sample(r_tuple_choices, n_tuples)
 
-    print(l_tuple_indexes, r_tuple_indexes)
-
     for nt in n_triangles:
         logging.info('running CERTA with nt='+str(nt))
         for i in range(0, n_tuples):
-            print(l_tuple_indexes[i], r_tuple_indexes[i])
             l_tuple = lsource.iloc[l_tuple_indexes[i]]
             r_tuple = rsource.iloc[r_tuple_indexes[i]]
             local_samples = dataset_local(l_tuple, r_tuple, model, lsource, rsource, datadir, theta_min, theta_max, predict_fn,
