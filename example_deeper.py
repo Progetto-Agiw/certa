@@ -10,9 +10,12 @@ import os
 import gensim.downloader as api
 import models.DeepER as dp
 import logging
+import random
 
 
-def run(metric, n_tuples=5, n_triangles=[8]):
+def run(metric, n_tuples=3, n_triangles=[8, 10]):
+
+    random.seed(42)
 
     def merge_sources(table, left_prefix, right_prefix, left_source, right_source, copy_from_table, ignore_from_table):
         dataset = pd.DataFrame(
@@ -109,11 +112,20 @@ def run(metric, n_tuples=5, n_triangles=[8]):
     attributi_random = []
     eval_data_df = pd.DataFrame(columns=['impact-score', 'mean-drop'])
 
+    l_tuple_choices = [i for i in range(len(lsource))]
+    r_tuple_choices = [i for i in range(len(rsource))]
+
+    l_tuple_indexes = random.sample(l_tuple_choices, n_tuples)
+    r_tuple_indexes = random.sample(r_tuple_choices, n_tuples)
+
+    print(l_tuple_indexes, r_tuple_indexes)
+
     for nt in n_triangles:
         logging.info('running CERTA with nt='+str(nt))
-        for i in range(1, n_tuples):
-            l_tuple = lsource.iloc[i]
-            r_tuple = rsource.iloc[i]
+        for i in range(0, n_tuples):
+            print(l_tuple_indexes[i], r_tuple_indexes[i])
+            l_tuple = lsource.iloc[l_tuple_indexes[i]]
+            r_tuple = rsource.iloc[r_tuple_indexes[i]]
             local_samples = dataset_local(l_tuple, r_tuple, model, lsource, rsource, datadir, theta_min, theta_max, predict_fn,
                                           num_triangles=nt, similiarity=metric)
 
