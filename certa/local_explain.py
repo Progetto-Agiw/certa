@@ -11,7 +11,7 @@ N.B. For now this script can only work using deepmatcher
 '''
 
 
-def find_candidates(record, source, similarity_threshold, find_positives, similiarity):
+def find_candidates(record, source, similarity_threshold, find_positives, similarity):
     record2text = " ".join(
         [str(val) for k, val in record.to_dict().items() if k not in ['id']])
     source_without_id = source.copy()
@@ -22,7 +22,7 @@ def find_candidates(record, source, similarity_threshold, find_positives, simili
     candidates = []
     for idx, row in enumerate(source_without_id):
         currentRecord = " ".join(row.astype(str))
-        currentSimilarity = similiarity(record2text, currentRecord)
+        currentSimilarity = similarity(record2text, currentRecord)
         if find_positives:
             if currentSimilarity >= similarity_threshold:
                 candidates.append((record['id'], source_ids[idx]))
@@ -56,7 +56,7 @@ def __generate_unlabeled(dataset_dir, unlabeled_filename, lprefix='ltable_', rpr
 
 def dataset_local(r1: pd.Series, r2: pd.Series, model, lsource: pd.DataFrame,
                   rsource: pd.DataFrame, dataset_dir, theta_min: float,
-                  theta_max: float, predict_fn, num_triangles=100, similiarity=metrics.get_cosine):
+                  theta_max: float, predict_fn, num_triangles=100, similarity=metrics.get_cosine):
     lprefix = 'ltable_'
     rprefix = 'rtable_'
     r1_df = pd.DataFrame(data=[r1.values], columns=r1.index)
@@ -73,15 +73,15 @@ def dataset_local(r1: pd.Series, r2: pd.Series, model, lsource: pd.DataFrame,
     if originalPrediction[0] > originalPrediction[1]:
         findPositives = True
         candidates4r1 = find_candidates(
-            r1, rsource, theta_max, find_positives=findPositives, similiarity=similiarity)
+            r1, rsource, theta_max, find_positives=findPositives, similarity=similarity)
         candidates4r2 = find_candidates(
-            r2, lsource, theta_max, find_positives=findPositives, similiarity=similiarity)
+            r2, lsource, theta_max, find_positives=findPositives, similarity=similarity)
     else:
         findPositives = False
         candidates4r1 = find_candidates(
-            r1, rsource, theta_min, find_positives=findPositives, similiarity=similiarity)
+            r1, rsource, theta_min, find_positives=findPositives, similarity=similarity)
         candidates4r2 = find_candidates(
-            r2, lsource, theta_min, find_positives=findPositives, similiarity=similiarity)
+            r2, lsource, theta_min, find_positives=findPositives, similarity=similarity)
     id4explanation = pd.concat(
         [candidates4r1, candidates4r2], ignore_index=True)
     tmp_name = "./{}.csv".format(
