@@ -50,7 +50,7 @@ def get_cosine(text1, text2):
 
 
 # Generalizzazione delle varie distanze: euclidea, manhattan etc.
-def minkowski_distance(text1, text2, power):
+def minkowski_distance(text1, text2, power=1.5):
     vec1 = text_to_vector(text1)
     vec2 = text_to_vector(text2)
     intersection = set(vec1.keys()) & set(vec2.keys())
