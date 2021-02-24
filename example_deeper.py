@@ -127,7 +127,7 @@ def run(metric, n_tuples=3, n_triangles=[8, 10], threshold_tuning: float = -2):
                 l_tuple = lsource.iloc[l_tuple_indexes[i]]
                 r_tuple = rsource.iloc[r_tuple_indexes[i]]
                 local_samples = dataset_local(l_tuple, r_tuple, model, lsource, rsource, datadir, theta_min, theta_max, predict_fn,
-                                              num_triangles=nt, similiarity=metric)
+                                              num_triangles=nt, similarity=metric)
 
                 prediction = get_original_prediction(l_tuple, r_tuple)
                 class_to_explain = np.argmax(prediction)
